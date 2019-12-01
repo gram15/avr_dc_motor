@@ -19,25 +19,85 @@ char TCNT2init= 130;
 cMotorControl::cMotorControl() :
     iHead(0)
   , iTail(0)
+  , iCmdSlider(0)
+  , bErrorActive(false)
 {
     // init the serial buffer
     memset(&szSerialBuffer, 0, SERIAL_BUFF_NUM);
+    memset(&szCmd, 0, 4);
 }
 
-int cMotorControl::cmdParser(char *szCmd)
+int cMotorControl::readSerialCmd()
 {
+    unsigned char iAvailableBytes = Serial.available();
+    if(iAvailableBytes > 0)
+    {
+        for(; iAvailableBytes; iAvailableBytes--)
+        {
+            szSerialBuffer[iHead++] = Serial.read();
+            iHead %= SERIAL_BUFF_NUM;
+        }
+    }
     return 0;
 }
 
-int cMotorControl::_pushBuffer(char *in, int iNum)
+int cMotorControl::cmdParser()
 {
+    // available bytes in buffer: (SERIAL_BUFF_NUM + head - tail )%SERIAL_BUFF_NUM
+    unsigned char iBufferContent = (SERIAL_BUFF_NUM + iHead - iTail) % SERIAL_BUFF_NUM;
+    if( iBufferContent > 0 )
+    {
+        char bReadByte = szSerialBuffer[iTail++];
+        switch(bReadByte)
+        {
+        case '#':
+            memset(&szCmd, 0, 4);
+            iCmdSlider = 0;
+            bErrorActive = false;
+            break;
+
+        case '@':
+            if(!bErrorActive) runCmd();
+            break;
+
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '9':
+        case 'A':
+        case 'B':
+        case 'C':
+        case 'D':
+        case 'E':
+        case 'F':
+            if(iCmdSlider < 2)
+            {
+                szCmd[iCmdSlider++] = bReadByte;
+            }
+            else
+            {
+                bErrorActive = true;
+            }
+            break;
+
+        default:
+            // not allowed char, do nothing or raise error?
+            bErrorActive = true;
+            break;
+        }
+        iTail %= SERIAL_BUFF_NUM;
+    }
     return 0;
 }
 
-int cMotorControl::_popBuffer(char *out, int iNum)
-{
-    return 0;
-}
+
+
 
 //************************************//
 

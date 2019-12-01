@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 
-#define SERIAL_BUFF_NUM 32
+#define SERIAL_BUFF_NUM 64
 
 
 class cMotorControl
@@ -14,15 +14,29 @@ public:
 
     int readSerialCmd();
 
-    int cmdParser(char * szCmd);
+    int cmdParser();
+
+    enum eCOMMAND {
+        eCMD_START,
+        eCMD_STOP,
+        eCMD_READ,
+        eCMD_SETTRG,
+
+        eCMD_NUM
+    };
+
+
 
 private:
     // circular array for managing serial commands
     char szSerialBuffer[SERIAL_BUFF_NUM];
+    char szCmd[4];
+    int iCmdSlider;
     int iHead;
     int iTail;
-    int _pushBuffer(char *in, int iNum);
-    int _popBuffer(char *out, int iNum);
+    bool bErrorActive;
+
+    int runCmd();
 
 };
 
